@@ -1,95 +1,92 @@
 import { supabase } from '../lib/supabaseClient';
-import { GRID_SIZE, TOTAL } from '../data/pixels';
 
-export default function TopBar({ mode, onToggleSelect, activePanel, onPanel }) {
+const TABS = [
+  { key: 'canvas',      label: 'CANVAS'      },
+  { key: 'marketplace', label: 'MARKETPLACE' },
+  { key: 'my-pixels',   label: 'MY PIXELS'   },
+  { key: 'community',   label: 'COMMUNITY'   },
+];
+
+// Pixel-grid logo icon
+function PixelIcon() {
+  const colors = ['#f87171','#60a5fa','#34d399','#fbbf24','#a78bfa','#f472b6','#38bdf8','#4ade80','#fb923c'];
   return (
-    <header className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-2.5
-                       border-b border-white/10 bg-black/70 backdrop-blur-sm shrink-0 z-10 gap-2">
+    <svg width="28" height="28" viewBox="0 0 3 3" shapeRendering="crispEdges">
+      {colors.map((c, i) => (
+        <rect key={i} x={i % 3} y={Math.floor(i / 3)} width="1" height="1" fill={c} />
+      ))}
+    </svg>
+  );
+}
+
+export default function TopBar({ activeTab, onTabChange }) {
+  return (
+    <header className="flex items-center shrink-0 border-b border-white/10
+                       bg-black/80 backdrop-blur-sm z-20 h-12 px-4 gap-6">
 
       {/* Logo */}
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-white font-bold tracking-tight text-base sm:text-lg whitespace-nowrap">
-          SpecularBox
-        </span>
-        <span className="text-white/25 text-[10px] sm:text-xs font-mono hidden sm:block">
-          {GRID_SIZE.toLocaleString()}×{GRID_SIZE.toLocaleString()} · {(TOTAL / 1_000_000).toFixed(1)}M px
+      <div className="flex items-center gap-2 shrink-0">
+        <PixelIcon />
+        <span className="text-white font-bold tracking-tight text-sm leading-none hidden sm:block">
+          MILLION PIXEL<br/>
+          <span className="text-white/50 font-normal">CANVAS</span>
         </span>
       </div>
 
-      {/* Center: hint (solo desktop) */}
-      <span className="text-white/25 text-[11px] font-mono hidden md:block">
-        {mode === 'select' ? 'drag to select a zone' : 'scroll to zoom · drag to pan'}
-      </span>
+      {/* Nav tabs — ocultos en móvil (están en el MobileTabBar) */}
+      <nav className="hidden md:flex items-stretch h-full gap-0 overflow-x-auto scrollbar-none">
+        {TABS.map((tab, i) => (
+          <button
+            key={tab.key}
+            onClick={() => onTabChange(tab.key)}
+            className={`
+              flex items-center px-3 sm:px-4 text-[11px] sm:text-xs font-semibold tracking-widest
+              border-b-2 transition-colors whitespace-nowrap
+              ${activeTab === tab.key
+                ? 'text-white border-white'
+                : 'text-white/40 border-transparent hover:text-white/70'}
+              ${i > 0 ? 'border-l border-l-white/[0.06]' : ''}
+            `}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-      {/* Right actions */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-
-        {/* Select zone */}
-        <button
-          onClick={onToggleSelect}
-          className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium
-                      border transition-all select-none
-                      ${mode === 'select'
-                        ? 'bg-white text-black border-white'
-                        : 'bg-white/[0.06] text-white/60 border-white/[0.12] hover:text-white hover:border-white/30'}`}
-        >
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <rect x="1" y="1" width="12" height="12" rx="1" strokeDasharray="3 2"/>
+      {/* Right: icons */}
+      <div className="ml-auto flex items-center gap-1 shrink-0">
+        {/* Bell */}
+        <button className="w-8 h-8 flex items-center justify-center rounded-lg
+                           text-white/40 hover:text-white/80 transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
           </svg>
-          <span className="hidden sm:inline">
-            {mode === 'select' ? 'Cancel' : 'Select zone'}
-          </span>
         </button>
 
-        {/* Stats toggle */}
-        <button
-          onClick={() => onPanel('stats')}
-          title="Stats"
-          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium
-                      border transition-all select-none
-                      ${activePanel === 'stats'
-                        ? 'bg-white/10 text-white border-white/30'
-                        : 'bg-white/[0.06] text-white/60 border-white/[0.12] hover:text-white/80'}`}
-        >
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="8" width="3" height="7" rx="0.5"/>
-            <rect x="6" y="5" width="3" height="10" rx="0.5"/>
-            <rect x="11" y="2" width="3" height="13" rx="0.5"/>
+        {/* Search */}
+        <button className="w-8 h-8 flex items-center justify-center rounded-lg
+                           text-white/40 hover:text-white/80 transition-colors">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
           </svg>
-          <span className="hidden sm:inline">Stats</span>
         </button>
 
-        {/* Market toggle */}
-        <button
-          onClick={() => onPanel('market')}
-          title="Market"
-          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium
-                      border transition-all select-none
-                      ${activePanel === 'market'
-                        ? 'bg-white/10 text-white border-white/30'
-                        : 'bg-white/[0.06] text-white/60 border-white/[0.12] hover:text-white/80'}`}
-        >
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"
-               stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-            <path d="M2 3h12l-1.5 6H3.5L2 3z"/>
-            <circle cx="5.5" cy="13" r="1"/>
-            <circle cx="11.5" cy="13" r="1"/>
-          </svg>
-          <span className="hidden sm:inline">Market</span>
-        </button>
-
-        {/* Sign out */}
+        {/* Avatar / sign out */}
         <button
           onClick={() => supabase.auth.signOut()}
-          className="text-white/40 hover:text-white/80 text-xs font-mono transition-colors px-1"
-          title="Cerrar sesión"
+          title="Sign out"
+          className="w-8 h-8 flex items-center justify-center rounded-full
+                     bg-white/10 hover:bg-white/20 transition-colors
+                     text-white/70 hover:text-white text-xs font-mono font-bold"
         >
-          <span className="hidden sm:inline">sign out</span>
-          <svg className="sm:hidden" width="14" height="14" viewBox="0 0 24 24" fill="none"
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
           </svg>
         </button>
       </div>

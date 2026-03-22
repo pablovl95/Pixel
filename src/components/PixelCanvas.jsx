@@ -33,8 +33,9 @@ export default function PixelCanvas({
   const modeRef     = useRef(mode);
   const lastTouches = useRef([]);
 
-  const selStart    = useRef(null);
-  const selEnd      = useRef(null);
+  const selStart      = useRef(null);
+  const selEnd        = useRef(null);
+  const highlightRef  = useRef(null); // { x, y } pixel resaltado por goTo
   const isSelecting = useRef(false);
 
   useEffect(() => { modeRef.current = mode; }, [mode]);
@@ -123,6 +124,48 @@ export default function PixelCanvas({
       ctx.fillText(`${gx1 - gx0 + 1}×${gy1 - gy0 + 1}  (${total.toLocaleString()}px)`, sx0 + 8, sy0 + 16);
     }
 
+    // ─── Go-to highlight ────────────────────────────────────────────
+    if (highlightRef.current) {
+      const { x: hx, y: hy } = highlightRef.current;
+      const sx = (hx - offsetX) * scale;
+      const sy = (hy - offsetY) * scale;
+
+      // pulso animado
+      const pulse = 0.35 + 0.25 * Math.sin(Date.now() / 250);
+
+      // relleno pulsante
+      ctx.fillStyle = `rgba(255,255,100,${pulse * 0.35})`;
+      ctx.fillRect(sx, sy, scale, scale);
+
+      // borde sólido blanco
+      ctx.strokeStyle = `rgba(255,255,100,${0.6 + pulse * 0.4})`;
+      ctx.lineWidth   = Math.max(1.5, scale * 0.08);
+      ctx.strokeRect(sx + ctx.lineWidth / 2, sy + ctx.lineWidth / 2,
+                     scale - ctx.lineWidth, scale - ctx.lineWidth);
+
+      // crosshair lines
+      const cx2 = sx + scale / 2, cy2 = sy + scale / 2;
+      ctx.strokeStyle = `rgba(255,255,100,${pulse * 0.7})`;
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cx2, 0);       ctx.lineTo(cx2, H);
+      ctx.moveTo(0,   cy2);     ctx.lineTo(W,   cy2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // etiqueta de coordenadas
+      const label = `(${hx}, ${hy})`;
+      ctx.font = 'bold 11px monospace';
+      const tw = ctx.measureText(label).width;
+      const lx = Math.min(sx + scale + 4, W - tw - 8);
+      const ly = Math.max(sy, 16);
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(lx - 2, ly - 12, tw + 8, 18);
+      ctx.fillStyle = '#ffff64';
+      ctx.fillText(label, lx + 2, ly);
+    }
+
     rafRef.current = requestAnimationFrame(render);
   }, []);
 
@@ -137,7 +180,7 @@ export default function PixelCanvas({
       onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height });
     };
     init();
-    window.addEventListener('resize', init);
+    window.addEventListener('resize', () => { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; cam.current.scale = fitScale(canvas.width, canvas.height); clamp(); const fs = fitScale(canvas.width, canvas.height); onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height, zoomPct: Math.round(cam.current.scale / fs * 100) }); });
     rafRef.current = requestAnimationFrame(render);
     return () => { window.removeEventListener('resize', init); cancelAnimationFrame(rafRef.current); };
   }, [render, clamp, onViewChange]);
@@ -156,7 +199,8 @@ export default function PixelCanvas({
     cam.current.offsetX = gx - mx / newScale;
     cam.current.offsetY = gy - my / newScale;
     clamp();
-    onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height });
+    const fs2 = fitScale(canvas.width, canvas.height);
+    onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height, zoomPct: Math.round(cam.current.scale / fs2 * 100) });
   }, [clamp, onViewChange]);
 
   useEffect(() => {
@@ -178,6 +222,7 @@ export default function PixelCanvas({
 
   // ─── Mouse handlers ───────────────────────────────────────────────────────
   const onMouseDown = useCallback((e) => {
+    highlightRef.current = null; // limpiar highlight al interactuar
     if (modeRef.current === 'select') {
       isSelecting.current = true;
       const g = toGrid(e.clientX, e.clientY);
@@ -203,7 +248,7 @@ export default function PixelCanvas({
     lastMouse.current = { x: e.clientX, y: e.clientY };
     clamp();
     const c = canvasRef.current;
-    onViewChange?.({ ...cam.current, canvasW: c.width, canvasH: c.height });
+    onViewChange?.({ ...cam.current, canvasW: c.width, canvasH: c.height, zoomPct: Math.round(cam.current.scale / fitScale(c.width, c.height) * 100) });
   }, [toGrid, clamp, onPixelHover, onViewChange]);
 
   const onMouseUp = useCallback(() => {
@@ -221,6 +266,7 @@ export default function PixelCanvas({
   // ─── Touch handlers ───────────────────────────────────────────────────────
   const onTouchStart = useCallback((e) => {
     e.preventDefault();
+    highlightRef.current = null;
     const touches = Array.from(e.touches);
     lastTouches.current = touches.map(t => ({ x: t.clientX, y: t.clientY }));
 
@@ -289,7 +335,7 @@ export default function PixelCanvas({
         cam.current.offsetY -= (touches[0].clientY - lastMouse.current.y) / cam.current.scale;
         clamp();
         const c = canvasRef.current;
-        onViewChange?.({ ...cam.current, canvasW: c.width, canvasH: c.height });
+        onViewChange?.({ ...cam.current, canvasW: c.width, canvasH: c.height, zoomPct: Math.round(cam.current.scale / fitScale(c.width, c.height) * 100) });
       }
       lastMouse.current = { x: touches[0].clientX, y: touches[0].clientY };
     }
@@ -352,7 +398,45 @@ export default function PixelCanvas({
         cam.current.offsetX = gx - (canvas.width  / scale) / 2;
         cam.current.offsetY = gy - (canvas.height / scale) / 2;
         clamp();
-        onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height });
+        const fs = fitScale(canvas.width, canvas.height);
+        onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height, zoomPct: Math.round(cam.current.scale / fs * 100) });
+      },
+      zoomIn() {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        cam.current.scale = Math.min(MAX_SCALE, cam.current.scale * 1.5);
+        clamp();
+        const fs = fitScale(canvas.width, canvas.height);
+        onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height, zoomPct: Math.round(cam.current.scale / fs * 100) });
+      },
+      zoomOut() {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        cam.current.scale = Math.max(fitScale(canvas.width, canvas.height), cam.current.scale / 1.5);
+        clamp();
+        const fs = fitScale(canvas.width, canvas.height);
+        onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height, zoomPct: Math.round(cam.current.scale / fs * 100) });
+      },
+      setZoomPct(pct) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const fs = fitScale(canvas.width, canvas.height);
+        cam.current.scale = Math.min(MAX_SCALE, Math.max(fs, fs * (pct / 100)));
+        clamp();
+        onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height, zoomPct: Math.round(cam.current.scale / fs * 100) });
+      },
+      // Zoom a un pixel concreto, centra y resalta
+      goTo(gx, gy) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const fs         = fitScale(canvas.width, canvas.height);
+        const zoomScale  = Math.min(MAX_SCALE, fs * 600); // zoom alto para ver el pixel claramente
+        cam.current.scale   = zoomScale;
+        cam.current.offsetX = gx - (canvas.width  / zoomScale) / 2;
+        cam.current.offsetY = gy - (canvas.height / zoomScale) / 2;
+        clamp();
+        highlightRef.current = { x: Math.floor(gx), y: Math.floor(gy) };
+        onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height, zoomPct: Math.round(cam.current.scale / fs * 100) });
       },
     };
   }, [controlRef, clamp, onViewChange]);
