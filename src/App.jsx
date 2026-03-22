@@ -13,18 +13,25 @@ export default function App() {
   const [camState,     setCamState]     = useState(null);
   const [mode,         setMode]         = useState('view');
   const [selection,    setSelection]    = useState(null);
+  const [statsOpen,    setStatsOpen]    = useState(false);
   const canvasControl = useRef(null);
 
   const handleSelection = useCallback((rect) => { setSelection(rect); setMode('view'); }, []);
   const closeModal      = useCallback(() => setSelection(null), []);
   const toggleSelect    = useCallback(() => { setMode(m => m === 'select' ? 'view' : 'select'); setSelection(null); }, []);
+  const toggleStats     = useCallback(() => setStatsOpen(v => !v), []);
 
   if (session === undefined) return null;
   if (!session) return <Login />;
 
   return (
     <div className="w-screen h-screen bg-[#111] flex flex-col overflow-hidden">
-      <TopBar mode={mode} onToggleSelect={toggleSelect} />
+      <TopBar
+        mode={mode}
+        onToggleSelect={toggleSelect}
+        onToggleStats={toggleStats}
+        statsOpen={statsOpen}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <CanvasArea
@@ -36,7 +43,7 @@ export default function App() {
           camState={camState}
           canvasControl={canvasControl}
         />
-        <StatsPanel />
+        <StatsPanel open={statsOpen} onClose={() => setStatsOpen(false)} />
       </div>
 
       {selection && <SelectionModal selection={selection} onClose={closeModal} />}

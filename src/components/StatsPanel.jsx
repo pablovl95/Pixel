@@ -58,13 +58,35 @@ function FillBar({ pct }) {
 }
 
 // ─── Main panel ───────────────────────────────────────────────────────────
-export default function StatsPanel() {
+export default function StatsPanel({ open, onClose }) {
   const last7  = dailyData.slice(-7);
   const last30 = dailyData.slice(-30);
 
   return (
-    <aside className="w-72 shrink-0 h-full overflow-y-auto bg-black/50 border-l border-white/[0.08]
-                      backdrop-blur-sm flex flex-col gap-3 px-3 py-3 text-white">
+    <>
+      {/* ── Mobile bottom sheet backdrop ── */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={[
+        'bg-black/80 backdrop-blur-sm flex flex-col gap-3 px-3 py-3 text-white',
+        // desktop
+        'md:relative md:w-72 md:shrink-0 md:h-full md:overflow-y-auto md:border-l md:border-white/[0.08] md:translate-y-0 md:z-auto md:rounded-none',
+        // mobile bottom sheet
+        'fixed bottom-0 left-0 right-0 z-40 max-h-[70vh] overflow-y-auto',
+        'rounded-t-2xl border-t border-x border-white/[0.12]',
+        'transition-transform duration-300 ease-in-out',
+        open ? 'translate-y-0' : 'translate-y-full md:translate-y-0',
+      ].join(' ')}>
+
+        {/* drag handle (solo mobile) */}
+        <div className="md:hidden flex justify-center pb-1 -mt-1">
+          <div className="w-8 h-1 rounded-full bg-white/20" />
+        </div>
 
       {/* ── Overview KPIs ── */}
       <Section title="Overview">
@@ -174,5 +196,6 @@ export default function StatsPanel() {
       {/* Padding at bottom */}
       <div className="h-3" />
     </aside>
+    </>
   );
 }

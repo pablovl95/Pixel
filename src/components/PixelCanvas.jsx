@@ -23,7 +23,7 @@ function getOffscreen() {
 // ─── Component ─────────────────────────────────────────────────────────────
 export default function PixelCanvas({
   onPixelHover, onPixelClick, onViewChange, onSelection, controlRef,
-  mode = 'view', // 'view' | 'select'
+  mode = 'view',
 }) {
   const canvasRef   = useRef(null);
   const rafRef      = useRef(null);
@@ -31,13 +31,12 @@ export default function PixelCanvas({
   const lastMouse   = useRef({ x: 0, y: 0 });
   const cam         = useRef({ scale: 1, offsetX: 0, offsetY: 0 });
   const modeRef     = useRef(mode);
+  const lastTouches = useRef([]);
 
-  // Selection state (in grid coords)
-  const selStart    = useRef(null);  // { x, y }
-  const selEnd      = useRef(null);  // { x, y }
+  const selStart    = useRef(null);
+  const selEnd      = useRef(null);
   const isSelecting = useRef(false);
 
-  // Keep modeRef in sync without recreating callbacks
   useEffect(() => { modeRef.current = mode; }, [mode]);
 
   // ─── Clamp ──────────────────────────────────────────────────────────────
@@ -73,7 +72,6 @@ export default function PixelCanvas({
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(getOffscreen(), offsetX, offsetY, W / scale, H / scale, 0, 0, W, H);
 
-    // Grid lines
     if (scale >= GRIDLINE_AT) {
       ctx.strokeStyle = 'rgba(255,255,255,0.08)';
       ctx.lineWidth   = 0.5;
@@ -85,7 +83,6 @@ export default function PixelCanvas({
       ctx.stroke();
     }
 
-    // For-sale highlight
     if (scale >= 16) {
       ctx.strokeStyle = '#22c55e';
       ctx.lineWidth   = 1;
@@ -99,7 +96,6 @@ export default function PixelCanvas({
           }
     }
 
-    // ─── Selection overlay ───────────────────────────────────────────────
     if (selStart.current && selEnd.current) {
       const gx0 = Math.min(selStart.current.x, selEnd.current.x);
       const gy0 = Math.min(selStart.current.y, selEnd.current.y);
@@ -113,14 +109,12 @@ export default function PixelCanvas({
 
       ctx.fillStyle   = 'rgba(255,255,255,0.08)';
       ctx.fillRect(sx0, sy0, sw, sh);
-
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth   = 1.5;
       ctx.setLineDash([5, 3]);
       ctx.strokeRect(sx0, sy0, sw, sh);
       ctx.setLineDash([]);
 
-      // Corner label
       const total = (gx1 - gx0 + 1) * (gy1 - gy0 + 1);
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(sx0 + 4, sy0 + 4, 110, 18);
@@ -203,7 +197,6 @@ export default function PixelCanvas({
       if (isSelecting.current) selEnd.current = g;
       return;
     }
-
     if (!dragging.current) return;
     cam.current.offsetX -= (e.clientX - lastMouse.current.x) / cam.current.scale;
     cam.current.offsetY -= (e.clientY - lastMouse.current.y) / cam.current.scale;
@@ -225,7 +218,122 @@ export default function PixelCanvas({
     dragging.current = false;
   }, [onSelection]);
 
-  // Clear selection when switching modes
+  // ─── Touch handlers ───────────────────────────────────────────────────────
+  const onTouchStart = useCallback((e) => {
+    e.preventDefault();
+    const touches = Array.from(e.touches);
+    lastTouches.current = touches.map(t => ({ x: t.clientX, y: t.clientY }));
+
+    if (touches.length === 1) {
+      if (modeRef.current === 'select') {
+        isSelecting.current = true;
+        const g = toGrid(touches[0].clientX, touches[0].clientY);
+        selStart.current = g;
+        selEnd.current   = g;
+      } else {
+        dragging.current  = true;
+        lastMouse.current = { x: touches[0].clientX, y: touches[0].clientY };
+      }
+    } else {
+      // 2+ fingers → cancel any pan/select, start pinch
+      dragging.current    = false;
+      isSelecting.current = false;
+    }
+  }, [toGrid]);
+
+  const onTouchMove = useCallback((e) => {
+    e.preventDefault();
+    const touches = Array.from(e.touches);
+    const prev = lastTouches.current;
+
+    if (touches.length === 2 && prev.length >= 2) {
+      const canvas = canvasRef.current;
+
+      const prevDist = Math.hypot(prev[1].x - prev[0].x, prev[1].y - prev[0].y);
+      const newDist  = Math.hypot(
+        touches[1].clientX - touches[0].clientX,
+        touches[1].clientY - touches[0].clientY,
+      );
+      const factor = prevDist > 0 ? newDist / prevDist : 1;
+
+      // midpoint in screen coords
+      const midX = (touches[0].clientX + touches[1].clientX) / 2;
+      const midY = (touches[0].clientY + touches[1].clientY) / 2;
+      const rect  = canvas.getBoundingClientRect();
+      const mx = midX - rect.left;
+      const my = midY - rect.top;
+
+      const { scale, offsetX, offsetY } = cam.current;
+      const minScale  = fitScale(canvas.width, canvas.height);
+      const newScale  = Math.min(MAX_SCALE, Math.max(minScale, scale * factor));
+      const gx = mx / scale + offsetX;
+      const gy = my / scale + offsetY;
+      cam.current.scale   = newScale;
+      cam.current.offsetX = gx - mx / newScale;
+      cam.current.offsetY = gy - my / newScale;
+
+      // also pan with midpoint delta
+      const prevMidX = (prev[0].x + prev[1].x) / 2;
+      const prevMidY = (prev[0].y + prev[1].y) / 2;
+      cam.current.offsetX -= (midX - prevMidX) / newScale;
+      cam.current.offsetY -= (midY - prevMidY) / newScale;
+
+      clamp();
+      onViewChange?.({ ...cam.current, canvasW: canvas.width, canvasH: canvas.height });
+
+    } else if (touches.length === 1) {
+      if (modeRef.current === 'select' && isSelecting.current) {
+        selEnd.current = toGrid(touches[0].clientX, touches[0].clientY);
+      } else if (dragging.current) {
+        cam.current.offsetX -= (touches[0].clientX - lastMouse.current.x) / cam.current.scale;
+        cam.current.offsetY -= (touches[0].clientY - lastMouse.current.y) / cam.current.scale;
+        clamp();
+        const c = canvasRef.current;
+        onViewChange?.({ ...cam.current, canvasW: c.width, canvasH: c.height });
+      }
+      lastMouse.current = { x: touches[0].clientX, y: touches[0].clientY };
+    }
+
+    lastTouches.current = touches.map(t => ({ x: t.clientX, y: t.clientY }));
+  }, [toGrid, clamp, onViewChange]);
+
+  const onTouchEnd = useCallback((e) => {
+    e.preventDefault();
+    const remaining = Array.from(e.touches);
+    lastTouches.current = remaining.map(t => ({ x: t.clientX, y: t.clientY }));
+
+    if (remaining.length === 0) {
+      if (modeRef.current === 'select' && isSelecting.current && selStart.current && selEnd.current) {
+        isSelecting.current = false;
+        const gx0 = Math.min(selStart.current.x, selEnd.current.x);
+        const gy0 = Math.min(selStart.current.y, selEnd.current.y);
+        const gx1 = Math.max(selStart.current.x, selEnd.current.x);
+        const gy1 = Math.max(selStart.current.y, selEnd.current.y);
+        onSelection?.({ x0: gx0, y0: gy0, x1: gx1, y1: gy1 });
+      }
+      dragging.current = false;
+    } else if (remaining.length === 1) {
+      // went from 2 fingers to 1 → resume pan
+      dragging.current  = true;
+      lastMouse.current = { x: remaining[0].clientX, y: remaining[0].clientY };
+    }
+  }, [onSelection]);
+
+  // add touch listeners imperatively so we can use { passive: false }
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    canvas.addEventListener('touchstart',  onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove',   onTouchMove,  { passive: false });
+    canvas.addEventListener('touchend',    onTouchEnd,   { passive: false });
+    canvas.addEventListener('touchcancel', onTouchEnd,   { passive: false });
+    return () => {
+      canvas.removeEventListener('touchstart',  onTouchStart);
+      canvas.removeEventListener('touchmove',   onTouchMove);
+      canvas.removeEventListener('touchend',    onTouchEnd);
+      canvas.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [onTouchStart, onTouchMove, onTouchEnd]);
+
   useEffect(() => {
     if (mode === 'view') {
       selStart.current = null;
@@ -252,7 +360,8 @@ export default function PixelCanvas({
   return (
     <canvas
       ref={canvasRef}
-      className={`w-full h-full select-none ${mode === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
+      className={`w-full h-full select-none touch-none
+                  ${mode === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
