@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
 import { GRID_SIZE, TOTAL } from '../data/pixels';
 
-export default function TopBar({ mode, onToggleSelect, onToggleStats, statsOpen }) {
+export default function TopBar({ mode, onToggleSelect, activePanel, onPanel }) {
   return (
     <header className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-2.5
                        border-b border-white/10 bg-black/70 backdrop-blur-sm shrink-0 z-10 gap-2">
@@ -41,20 +41,41 @@ export default function TopBar({ mode, onToggleSelect, onToggleStats, statsOpen 
           </span>
         </button>
 
-        {/* Stats toggle (solo mobile) */}
+        {/* Stats toggle */}
         <button
-          onClick={onToggleStats}
+          onClick={() => onPanel('stats')}
+          title="Stats"
           className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium
-                      border transition-all select-none md:hidden
-                      ${statsOpen
+                      border transition-all select-none
+                      ${activePanel === 'stats'
                         ? 'bg-white/10 text-white border-white/30'
-                        : 'bg-white/[0.06] text-white/60 border-white/[0.12]'}`}
+                        : 'bg-white/[0.06] text-white/60 border-white/[0.12] hover:text-white/80'}`}
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
             <rect x="1" y="8" width="3" height="7" rx="0.5"/>
             <rect x="6" y="5" width="3" height="10" rx="0.5"/>
             <rect x="11" y="2" width="3" height="13" rx="0.5"/>
           </svg>
+          <span className="hidden sm:inline">Stats</span>
+        </button>
+
+        {/* Market toggle */}
+        <button
+          onClick={() => onPanel('market')}
+          title="Market"
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium
+                      border transition-all select-none
+                      ${activePanel === 'market'
+                        ? 'bg-white/10 text-white border-white/30'
+                        : 'bg-white/[0.06] text-white/60 border-white/[0.12] hover:text-white/80'}`}
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"
+               stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <path d="M2 3h12l-1.5 6H3.5L2 3z"/>
+            <circle cx="5.5" cy="13" r="1"/>
+            <circle cx="11.5" cy="13" r="1"/>
+          </svg>
+          <span className="hidden sm:inline">Market</span>
         </button>
 
         {/* Sign out */}
