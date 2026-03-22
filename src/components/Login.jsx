@@ -19,7 +19,7 @@ export default function Login() {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setMessage('✅ Revisa tu email para confirmar tu cuenta.');
+        setMessage('Revisa tu email para confirmar tu cuenta.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -32,62 +32,85 @@ export default function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50 px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-slate-800">
-          {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
-        </h1>
+    <div className="flex items-center justify-center min-h-screen bg-[#111] px-4">
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              required
-              autoComplete="email"
-              className="px-3 py-2.5 rounded-lg border border-slate-300 text-base focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            />
-          </label>
+      {/* fondo de ruido sutil igual que el canvas */}
+      <div className="absolute inset-0 bg-[#0d0d0d] opacity-60 pointer-events-none" />
 
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            Contraseña
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              autoComplete={isSignUp ? 'new-password' : 'current-password'}
-              className="px-3 py-2.5 rounded-lg border border-slate-300 text-base focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            />
-          </label>
+      <div className="relative w-full max-w-sm">
 
-          {error   && <p className="text-red-500 text-sm">{error}</p>}
-          {message && <p className="text-emerald-600 text-sm">{message}</p>}
+        {/* logotipo */}
+        <div className="text-center mb-8">
+          <span className="text-white font-bold tracking-tight text-2xl">SpecularBox</span>
+          <p className="text-white/25 text-xs font-mono mt-1">
+            {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
+          </p>
+        </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-1 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-base transition-colors disabled:opacity-60"
-          >
-            {loading ? 'Procesando...' : isSignUp ? 'Registrarse' : 'Entrar'}
-          </button>
-        </form>
+        {/* card */}
+        <div className="bg-black/60 border border-white/10 rounded-2xl backdrop-blur-sm p-8">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-        <p className="mt-5 text-center text-sm text-slate-500">
-          {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
-          <button
-            type="button"
-            onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage(''); }}
-            className="text-emerald-600 font-semibold underline"
-          >
-            {isSignUp ? 'Inicia sesión' : 'Regístrate'}
-          </button>
-        </p>
+            <label className="flex flex-col gap-1.5 text-xs font-mono text-white/40 uppercase tracking-widest">
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                required
+                autoComplete="email"
+                className="px-3 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.12]
+                           text-white text-sm font-mono placeholder:text-white/20
+                           focus:outline-none focus:border-white/40 focus:bg-white/[0.08]
+                           transition-colors normal-case tracking-normal"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-xs font-mono text-white/40 uppercase tracking-widest">
+              Contraseña
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={6}
+                autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                className="px-3 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.12]
+                           text-white text-sm font-mono placeholder:text-white/20
+                           focus:outline-none focus:border-white/40 focus:bg-white/[0.08]
+                           transition-colors normal-case tracking-normal"
+              />
+            </label>
+
+            {error   && <p className="text-red-400 text-xs font-mono">{error}</p>}
+            {message && <p className="text-white/60 text-xs font-mono">{message}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-1 py-2.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12]
+                         border border-white/[0.12] hover:border-white/30
+                         text-white text-sm font-mono font-medium
+                         transition-all select-none disabled:opacity-40"
+            >
+              {loading ? 'Procesando...' : isSignUp ? 'Registrarse' : 'Entrar'}
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-xs font-mono text-white/25">
+            {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
+            <button
+              type="button"
+              onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage(''); }}
+              className="text-white/50 hover:text-white/80 underline transition-colors"
+            >
+              {isSignUp ? 'Inicia sesión' : 'Regístrate'}
+            </button>
+          </p>
+        </div>
+
       </div>
     </div>
   );

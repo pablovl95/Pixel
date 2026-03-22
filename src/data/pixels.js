@@ -26,16 +26,7 @@ const rand = mulberry32(42);
 
 // ─── "Art zones" — rectangular blobs of similar hue ──────────────────────
 const ZONES = [
-  { x: 50,  y: 50,  w: 200, h: 150, hue: 210, sat: 80 },  // blue cluster
-  { x: 300, y: 100, w: 120, h: 120, hue: 340, sat: 70 },  // pink cluster
-  { x: 600, y: 200, w: 180, h: 250, hue: 140, sat: 65 },  // green cluster
-  { x: 150, y: 400, w: 250, h: 100, hue: 30,  sat: 75 },  // orange cluster
-  { x: 700, y: 500, w: 200, h: 200, hue: 270, sat: 70 },  // purple cluster
-  { x: 400, y: 600, w: 300, h: 150, hue: 0,   sat: 75 },  // red cluster
-  { x: 100, y: 700, w: 150, h: 200, hue: 60,  sat: 80 },  // yellow cluster
-  { x: 600, y: 750, w: 250, h: 200, hue: 185, sat: 70 },  // cyan cluster
-  { x: 800, y: 50,  w: 150, h: 300, hue: 15,  sat: 65 },  // amber cluster
-  { x: 450, y: 350, w: 100, h: 100, hue: 300, sat: 85 },  // magenta cluster
+
 ];
 
 // Check if a pixel falls inside a zone

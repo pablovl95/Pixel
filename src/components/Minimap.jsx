@@ -46,10 +46,16 @@ export default function Minimap({ cam, onClick }) {
     ctx.fillRect(0,     ry,      rx,      rh);
     ctx.fillRect(rx + rw, ry,   MAP_SIZE - rx - rw, rh);
 
-    // Viewport border
+    // Viewport border (clamped so the stroke never bleeds outside the canvas)
     ctx.strokeStyle = '#fff';
     ctx.lineWidth   = 1.5;
-    ctx.strokeRect(rx, ry, rw, rh);
+    const half = 0.75;
+    const sx = Math.max(rx, half);
+    const sy = Math.max(ry, half);
+    const ex = Math.min(rx + rw, MAP_SIZE - half);
+    const ey = Math.min(ry + rh, MAP_SIZE - half);
+    const MIN = 3; // mínimo visible aunque el zoom sea máximo
+    ctx.strokeRect(sx, sy, Math.max(ex - sx, MIN), Math.max(ey - sy, MIN));
   }, [cam]);
 
   const handleClick = (e) => {
