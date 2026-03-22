@@ -36,11 +36,6 @@ export default function App() {
 
   const handleTabChange = useCallback((tab) => setActiveTab(tab), []);
 
-  const jumpTo = useCallback((gx, gy) => {
-    canvasControl.current?.jumpTo(gx, gy);
-    setActiveTab('canvas');
-  }, []);
-
   // goTo: zoom alto + highlight del pixel, luego vuelve al canvas
   const goTo = useCallback((gx, gy) => {
     setActiveTab('canvas');
@@ -66,7 +61,7 @@ export default function App() {
           onZoomSelect={(pct) => canvasControl.current?.setZoomPct(pct)}
           mode={mode}
           onToggleSelect={toggleSelect}
-          onSearch={jumpTo}
+          onSearch={goTo}
         />
       )}
 
